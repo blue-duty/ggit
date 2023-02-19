@@ -2,19 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/emirpasic/gods/trees/binaryheap"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
-	"io"
-	"os"
-	"path"
-	"strings"
-	"time"
-
-	"github.com/emirpasic/gods/trees/binaryheap"
 	"github.com/go-git/go-git/v5/plumbing"
 	commitgraph_fmt "github.com/go-git/go-git/v5/plumbing/format/commitgraph"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/object/commitgraph"
+	"io"
+	"os"
+	"path"
+	"strings"
 )
 
 // Example how to resolve a revision into its commit counterpart
@@ -46,54 +44,54 @@ func main() {
 	}
 
 	// 遍历修改过的文件
-	for file, s := range status {
-		//if s.Worktree != git.Unmodified {
-		//	filePath := filepath.Join(w.Filesystem.Root(), file)
-		//	//f, err := os.Open(filePath)
-		//	//if err != nil {
-		//	//	fmt.Println(err)
-		//	//	continue
-		//	//}
-		//	//defer f.Close()
-		//
-		//	// 获取文件内容
-		//	//fileContents, err := getContents(f)
-		//	//if err != nil {
-		//	//	fmt.Println(err)
-		//	//	continue
-		//	//}
-		//
-		//	// 处理文件内容
-		//	fmt.Println(file)
-		//}
+	//for file, s := range status {
+	//if s.Worktree != git.Unmodified {
+	//	filePath := filepath.Join(w.Filesystem.Root(), file)
+	//	//f, err := os.Open(filePath)
+	//	//if err != nil {
+	//	//	fmt.Println(err)
+	//	//	continue
+	//	//}
+	//	//defer f.Close()
+	//
+	//	// 获取文件内容
+	//	//fileContents, err := getContents(f)
+	//	//if err != nil {
+	//	//	fmt.Println(err)
+	//	//	continue
+	//	//}
+	//
+	//	// 处理文件内容
+	//	fmt.Println(file)
+	//}
 
-		if s.Worktree == git.Unmodified {
-			// 判断文件是否存在
-			//filePath := filepath.Join(w.Filesystem.Root(), file)
-			if s.Staging == git.Deleted {
-				fmt.Println("Deleted:", file)
-				continue
-			}
-		}
-		switch s.Worktree {
-		case git.Unmodified:
-			fmt.Println("Unmodified:", file)
-		case git.Added:
-			fmt.Println("Added:", file)
-		case git.Deleted:
-			fmt.Println("Deleted:", file)
-		case git.Modified:
-			fmt.Println("Modified:", file)
-		case git.Renamed:
-			fmt.Println("Renamed:", file)
-		case git.Copied:
-			fmt.Println("Copied:", file)
-		case git.Untracked:
-			fmt.Println("Untracked:", file)
-		default:
-			fmt.Println("Unknown:", file)
-		}
-	}
+	//	if s.Worktree == git.Unmodified {
+	//		// 判断文件是否存在
+	//		//filePath := filepath.Join(w.Filesystem.Root(), file)
+	//		if s.Staging == git.Deleted {
+	//			fmt.Println("Deleted:", file)
+	//			continue
+	//		}
+	//	}
+	//	switch s.Worktree {
+	//	case git.Unmodified:
+	//		fmt.Println("Unmodified:", file)
+	//	case git.Added:
+	//		fmt.Println("Added:", file)
+	//	case git.Deleted:
+	//		fmt.Println("Deleted:", file)
+	//	case git.Modified:
+	//		fmt.Println("Modified:", file)
+	//	case git.Renamed:
+	//		fmt.Println("Renamed:", file)
+	//	case git.Copied:
+	//		fmt.Println("Copied:", file)
+	//	case git.Untracked:
+	//		fmt.Println("Untracked:", file)
+	//	default:
+	//		fmt.Println("Unknown:", file)
+	//	}
+	//}
 
 	// 提交被删除的文件，不提交修改的文件
 	//for file, s := range status {
@@ -120,26 +118,58 @@ func main() {
 	//}
 	//}
 
-	_, err = w.Add("main.go")
-	CheckIfError(err)
+	//_, err = w.Add("main.go")
+	//CheckIfError(err)
+	//
+	//// 提交
+	//commit, err := w.Commit("commit", &git.CommitOptions{
+	//	Author: &object.Signature{
+	//		Name:  "John Doe",
+	//		Email: "john@doe.org",
+	//		When:  time.Now(),
+	//	},
+	//})
+	//CheckIfError(err)
+	//
+	//obj, err := r.CommitObject(commit)
+	//CheckIfError(err)
+	//
+	//fmt.Println(obj)
+
+	// 遍历未提交的文件
+	var files []string
+	for file, s := range status {
+		if s.Worktree != git.Unmodified {
+			// 提交文件
+			_, err := w.Add(file)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			files = append(files, file)
+		} else {
+			// 提交被删除的文件
+			if s.Staging == git.Deleted {
+				// 提交文件
+				_, err := w.Add(file)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				files = append(files, file)
+			}
+		}
+	}
 
 	// 提交
-	commit, err := w.Commit("commit", &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  "John Doe",
-			Email: "john@doe.org",
-			When:  time.Now(),
-		},
-	})
+	_, err = w.Commit("testcommit", &git.CommitOptions{})
 	CheckIfError(err)
 
-	obj, err := r.CommitObject(commit)
-	CheckIfError(err)
-
-	fmt.Println(obj)
-
-	err = r.Push(&git.PushOptions{})
-	CheckIfError(err)
+	// 打印提交的文件
+	fmt.Println("Commit files:")
+	for _, file := range files {
+		fmt.Println(file)
+	}
 
 	fmt.Println("Done")
 
