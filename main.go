@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"ggit/cmd"
 	"github.com/emirpasic/gods/trees/binaryheap"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
@@ -23,25 +24,27 @@ func main() {
 	//revision := os.Args[2]
 	//treePath := os.Args[3]
 
-	path := "/home/duty/go/src/ggit"
+	cmd.Execute()
 
-	r, err := git.PlainOpen(path)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// 获取工作目录状态
-	w, err := r.Worktree()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	status, err := w.Status()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	//path := "/home/duty/go/src/ggit"
+	//
+	//r, err := git.PlainOpen(path)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//
+	//// 获取工作目录状态
+	//w, err := r.Worktree()
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//status, err := w.Status()
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
 
 	// 遍历修改过的文件
 	//for file, s := range status {
@@ -137,41 +140,41 @@ func main() {
 	//fmt.Println(obj)
 
 	// 遍历未提交的文件
-	var files []string
-	for file, s := range status {
-		if s.Worktree != git.Unmodified {
-			// 提交文件
-			_, err := w.Add(file)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			files = append(files, file)
-		} else {
-			// 提交被删除的文件
-			if s.Staging == git.Deleted {
-				// 提交文件
-				_, err := w.Add(file)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				files = append(files, file)
-			}
-		}
-	}
-
-	// 提交
-	_, err = w.Commit("testcommit", &git.CommitOptions{})
-	CheckIfError(err)
+	//var files []string
+	//for file, s := range status {
+	//	if s.Worktree != git.Unmodified {
+	//		// 提交文件
+	//		_, err := w.Add(file)
+	//		if err != nil {
+	//			fmt.Println(err)
+	//			return
+	//		}
+	//		files = append(files, file)
+	//	} else {
+	//		// 提交被删除的文件
+	//		if s.Staging == git.Deleted {
+	//			// 提交文件
+	//			_, err := w.Add(file)
+	//			if err != nil {
+	//				fmt.Println(err)
+	//				return
+	//			}
+	//			files = append(files, file)
+	//		}
+	//	}
+	//}
+	//
+	//// 提交
+	//_, err = w.Commit("testcommit", &git.CommitOptions{})
+	//CheckIfError(err)
 
 	// 打印提交的文件
-	fmt.Println("Commit files:")
-	for _, file := range files {
-		fmt.Println(file)
-	}
-
-	fmt.Println("Done")
+	//fmt.Println("Commit files:")
+	//for _, file := range files {
+	//	fmt.Println(file)
+	//}
+	//
+	//fmt.Println("Done")
 
 	// 获取最新引用
 	//ref, err := r.Head()

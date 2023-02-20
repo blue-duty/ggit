@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	tm "github.com/buger/goterm"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/cobra"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -56,17 +58,19 @@ var cmd = &cobra.Command{
 				_, err = workTree.Add(fileStatusList[i-1].file)
 			}
 			// commit input email, name and message
-			var email, name, message string
-			prompt = &survey.Input{
-				Message: "Please input your email:",
-			}
-			err = survey.AskOne(prompt, &email)
-			cobra.CheckErr(err)
-			prompt = &survey.Input{
-				Message: "Please input your name:",
-			}
-			err = survey.AskOne(prompt, &name)
-			cobra.CheckErr(err)
+			//var email, name, message string
+			//prompt = &survey.Input{
+			//	Message: "Please input your email:",
+			//}
+			//err = survey.AskOne(prompt, &email)
+			//cobra.CheckErr(err)
+			//prompt = &survey.Input{
+			//	Message: "Please input your name:",
+			//}
+			//err = survey.AskOne(prompt, &name)
+			//cobra.CheckErr(err)
+
+			var message string
 			prompt = &survey.Input{
 				Message: "Please input your commit message:",
 			}
@@ -74,8 +78,8 @@ var cmd = &cobra.Command{
 			cobra.CheckErr(err)
 			_, err = workTree.Commit(message, &git.CommitOptions{
 				Author: &object.Signature{
-					Name:  name,
-					Email: email,
+					Name:  globalName,
+					Email: globalMail,
 					When:  time.Now(),
 				},
 			})
@@ -131,6 +135,8 @@ func commit(fileStatusList []fileStatus) {
 var (
 	fileStatusList []fileStatus
 	workTree       *git.Worktree
+	globalMail     string
+	globalName     string
 )
 
 func init() {
@@ -141,6 +147,7 @@ func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ggit.yaml)")
 
 	fileStatusList = gitStatus()
+	globalName, globalMail = getGitConfig()
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	cmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -178,4 +185,62 @@ func gitStatus() []fileStatus {
 	}
 
 	return statusList
+}
+
+// 获取git的用户名和邮箱
+func getGitConfig() (string, string) {
+	var n, e string
+	// 查看.git config文件是否存在
+	_, err := os.Stat(".git/config")
+	if err == os.ErrNotExist {
+		goto git
+	} else if err != nil {
+		cobra.CheckErr(err)
+	} else {
+		// 读取文件内容
+		file, err := os.Open(".git/config")
+		cobra.CheckErr(err)
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				cobra.CheckErr(err)
+			}
+		}(file)
+
+		var name, email string
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.Contains(line, "name") {
+				name = line[strings.Index(line, "=")+1:]
+			}
+			if strings.Contains(line, "email") {
+				email = line[strings.Index(line, "=")+1:]
+			}
+		}
+		cobra.CheckErr(scanner.Err())
+
+		if name != "" && email != "" {
+			return name, email
+		} else {
+			goto git
+		}
+	}
+
+git:
+	var email, name []byte
+	// 获取系统的用户名
+	name, err = exec.Command("git", "config", "--global", "user.name").Output()
+	cobra.CheckErr(err)
+	// 获取系统的邮箱
+	email, err = exec.Command("git", "config", "--global", "user.email").Output()
+	cobra.CheckErr(err)
+
+	if e == "" && n == "" {
+		return strings.TrimSpace(string(name)), strings.TrimSpace(string(email))
+	} else if e == "" {
+		return n, strings.TrimSpace(string(email))
+	} else {
+		return strings.TrimSpace(string(name)), e
+	}
 }
