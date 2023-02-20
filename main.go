@@ -26,7 +26,7 @@ func main() {
 
 	cmd.Execute()
 
-	//path := "/home/duty/go/src/ggit"
+	//path := "/home/duty/go/src/got"
 	//
 	//r, err := git.PlainOpen(path)
 	//if err != nil {

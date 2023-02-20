@@ -3,7 +3,6 @@ package cmd
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	tm "github.com/buger/goterm"
 	"github.com/go-git/go-git/v5"
@@ -16,82 +15,74 @@ import (
 	"time"
 )
 
+var rootCmd = &cobra.Command{
+	Use:   "got",
+	Short: "got is a simple git tool",
+	Long: `got is a simple git tool,
+which can help you to commit and push your code easily.`,
+}
+
 var cmd = &cobra.Command{
-	Use:   "ggit",
-	Short: "A simple git tool",
+	Use:                "commit",
+	Short:              "commit your code",
+	DisableAutoGenTag:  true,
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		// 创建选择问题
-		question := &survey.Select{
-			Message: "Select Your Action:",
-			Options: []string{"Commit", "Commit And Push", "Push"},
+		_, err := tm.Println("The following is the file status list:")
+		cobra.CheckErr(err)
+		commit(fileStatusList)
+		tm.Flush()
+		var fileIndex string
+		prompt := &survey.Input{
+			Message: "Please input the serial number of the file you want to commit:",
 		}
-
-		// 提示用户选择选项
-		var answer string
-		if err := survey.AskOne(question, &answer); err != nil {
-			fmt.Println("Failed to prompt user:", err)
-			os.Exit(1)
-		}
-
-		// 根据用户选择的选项提示用户输入
-		switch answer {
-		case "Commit":
-			_, err := tm.Println("The following is the file status list:")
+		err = survey.AskOne(prompt, &fileIndex)
+		cobra.CheckErr(err)
+		// split by ,
+		for _, index := range strings.Split(fileIndex, ",") {
+			i, err := strconv.Atoi(strings.TrimSpace(index))
 			cobra.CheckErr(err)
-			commit(fileStatusList)
+			_, err = tm.Println(fileStatusList[i-1].file)
+			cobra.CheckErr(err)
 			tm.Flush()
-			var fileIndex string
-			prompt := &survey.Input{
-				Message: "Please input the serial number of the file you want to commit:",
-			}
-			err = survey.AskOne(prompt, &fileIndex)
-			cobra.CheckErr(err)
-			// split by ,
-			for _, index := range strings.Split(fileIndex, ",") {
-				i, err := strconv.Atoi(strings.TrimSpace(index))
-				cobra.CheckErr(err)
-				_, err = tm.Println(fileStatusList[i-1].file)
-				cobra.CheckErr(err)
-				tm.Flush()
 
-				// add file to staging area
-				_, err = workTree.Add(fileStatusList[i-1].file)
-			}
-			// commit input email, name and message
-			//var email, name, message string
-			//prompt = &survey.Input{
-			//	Message: "Please input your email:",
-			//}
-			//err = survey.AskOne(prompt, &email)
-			//cobra.CheckErr(err)
-			//prompt = &survey.Input{
-			//	Message: "Please input your name:",
-			//}
-			//err = survey.AskOne(prompt, &name)
-			//cobra.CheckErr(err)
-
-			var message string
-			prompt = &survey.Input{
-				Message: "Please input your commit message:",
-			}
-			err = survey.AskOne(prompt, &message)
-			cobra.CheckErr(err)
-			_, err = workTree.Commit(message, &git.CommitOptions{
-				Author: &object.Signature{
-					Name:  globalName,
-					Email: globalMail,
-					When:  time.Now(),
-				},
-			})
-			cobra.CheckErr(err)
+			// add file to staging area
+			_, err = workTree.Add(fileStatusList[i-1].file)
 		}
+		// commit input email, name and message
+		//var email, name, message string
+		//prompt = &survey.Input{
+		//	Message: "Please input your email:",
+		//}
+		//err = survey.AskOne(prompt, &email)
+		//cobra.CheckErr(err)
+		//prompt = &survey.Input{
+		//	Message: "Please input your name:",
+		//}
+		//err = survey.AskOne(prompt, &name)
+		//cobra.CheckErr(err)
+
+		var message string
+		prompt = &survey.Input{
+			Message: "Please input your commit message:",
+		}
+		err = survey.AskOne(prompt, &message)
+		cobra.CheckErr(err)
+		_, err = workTree.Commit(message, &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  globalName,
+				Email: globalMail,
+				When:  time.Now(),
+			},
+		})
+		cobra.CheckErr(err)
 	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := cmd.Execute()
+	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -144,13 +135,14 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ggit.yaml)")
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.got.yaml)")
 
 	fileStatusList = gitStatus()
 	globalName, globalMail = getGitConfig()
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	cmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	//cmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.AddCommand(cmd)
 }
 
 // git the status of the current repository
