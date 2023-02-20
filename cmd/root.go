@@ -36,8 +36,8 @@ var cmd = &cobra.Command{
 		case "Commit":
 			_, err := tm.Println("The following is the file status list:")
 			cobra.CheckErr(err)
-			tm.Flush()
 			commit(fileStatusList)
+			tm.Flush()
 			var fileIndex string
 			prompt := &survey.Input{
 				Message: "Please input the serial number of the file you want to commit:",
