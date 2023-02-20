@@ -36,6 +36,7 @@ var cmd = &cobra.Command{
 		case "Commit":
 			_, err := tm.Println("The following is the file status list:")
 			cobra.CheckErr(err)
+			tm.Flush()
 			commit(fileStatusList)
 			var fileIndex string
 			prompt := &survey.Input{
@@ -49,6 +50,7 @@ var cmd = &cobra.Command{
 				cobra.CheckErr(err)
 				_, err = tm.Println(fileStatusList[i-1].file)
 				cobra.CheckErr(err)
+				tm.Flush()
 
 				// add file to staging area
 				_, err = workTree.Add(fileStatusList[i-1].file)
