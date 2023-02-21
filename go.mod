@@ -8,6 +8,7 @@ require (
 	github.com/emirpasic/gods v1.18.1
 	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.5.2
+	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.6.1
 )
 

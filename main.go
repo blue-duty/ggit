@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"got/cmd"
 	"github.com/emirpasic/gods/trees/binaryheap"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
@@ -10,6 +9,7 @@ import (
 	commitgraph_fmt "github.com/go-git/go-git/v5/plumbing/format/commitgraph"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/object/commitgraph"
+	"got/cmd"
 	"io"
 	"os"
 	"path"
