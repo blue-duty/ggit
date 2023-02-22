@@ -9,7 +9,6 @@ import (
 var rootCmd = &cobra.Command{
 	Use:  "got <command>",
 	Long: `Simple to use Git form command line.`,
-	//DisableAutoGenTag: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
