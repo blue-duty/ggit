@@ -46,7 +46,7 @@ func init() {
 func get(getOpts *getOptions) error {
 	// 判断是url还是path
 	// 如果是url，直接下载
-	// 如果是path，先clone，再下载
+	// 如果是path，转为url，下载
 	if isNotURL(getOpts.url) {
 		return errors.New("not a url")
 	}

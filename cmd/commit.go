@@ -192,7 +192,7 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 		tm.Flush()
 		var fileIndex string
 		prompt := &survey.Input{
-			Message: "Please input the serial number of the file you want to commit:",
+			Message: "Please input the serial number of the file (You can use ',' to separate you want to commit or use ';' to separate you don't want to commit):",
 		}
 		err = survey.AskOne(prompt, &fileIndex)
 		cobra.CheckErr(err)
@@ -203,15 +203,45 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			tm.Flush()
 			return
 		}
-		for _, index := range strings.Split(fileIndex, ",") {
-			i, err := strconv.Atoi(strings.TrimSpace(index))
-			cobra.CheckErr(err)
-			_, err = tm.Println(fileStatusList[i-1].file)
-			cobra.CheckErr(err)
-			tm.Flush()
+		if strings.Contains(fileIndex, ";") {
+			var fsl = fileStatusList
+			for _, index := range strings.Split(fileIndex, ";") {
+				if len(strings.TrimSpace(index)) == 0 {
+					_, err := tm.Println(tm.Color("You don't input the serial number of the file you want to commit.", tm.RED))
+					cobra.CheckErr(err)
+					tm.Flush()
+					return
+				}
+				i, err := strconv.Atoi(strings.TrimSpace(index))
+				cobra.CheckErr(err)
+				// remove
+				fsl = append(fsl[:i-1], fsl[i:]...)
+			}
+			for _, fs := range fsl {
+				_, err = tm.Println(fs.file)
+				cobra.CheckErr(err)
+				tm.Flush()
+				_, err := workTree.Add(fs.file)
+				cobra.CheckErr(err)
+			}
 
-			// add file to staging area
-			_, err = workTree.Add(fileStatusList[i-1].file)
+		} else {
+			for _, index := range strings.Split(fileIndex, ",") {
+				if len(strings.TrimSpace(index)) == 0 {
+					_, err := tm.Println(tm.Color("You don't input the serial number of the file you want to commit.", tm.RED))
+					cobra.CheckErr(err)
+					tm.Flush()
+					return
+				}
+				i, err := strconv.Atoi(strings.TrimSpace(index))
+				cobra.CheckErr(err)
+				_, err = tm.Println(fileStatusList[i-1].file)
+				cobra.CheckErr(err)
+				tm.Flush()
+
+				// add file to staging area
+				_, err = workTree.Add(fileStatusList[i-1].file)
+			}
 		}
 
 		var message string
