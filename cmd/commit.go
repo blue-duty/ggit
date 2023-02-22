@@ -14,9 +14,28 @@ import (
 	"time"
 )
 
+func init() {
+	globalName, globalMail = getGitConfig()
+	gitStatus("")
+}
+
 type fileStatus struct {
 	file   string
 	status git.StatusCode
+}
+
+type commitOptions struct {
+	except  string
+	all     bool
+	message string
+}
+
+var commitOpts = &commitOptions{}
+
+func init() {
+	commitCmd.Flags().StringVarP(&commitOpts.except, "except", "e", "", "except files")
+	commitCmd.Flags().BoolVarP(&commitOpts.all, "all", "a", false, "commit all files")
+	commitCmd.Flags().StringVarP(&commitOpts.message, "message", "m", "", "commit message")
 }
 
 // Print fileStatus print
@@ -50,12 +69,69 @@ func commit(fileStatusList []fileStatus) {
 }
 
 var commitCmd = &cobra.Command{
-	Use:   "commit",
-	Short: "commit your code",
-	//DisableAutoGenTag:  true,
-	//DisableFlagParsing: true,
+	// dir非必须参数
+	Use:   "commit [<dir>] [flags]",
+	Short: "Commit files to local repository",
+	Long: `This command is used to commit files to the local repository by interactive mode.
+If you appoint the directory, it will use the directory as the root directory of the repository.
+If you don't appoint the directory, it will use the current directory as the root directory of the repository.
+It can list all the files which can be committed, and you can input the file's serial number to commit, they are separated by ','.
+And their status is distinguished by color. Green means added, Yellow means modified, Red means deleted, White means untracked.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := tm.Println("The following is the file status list:")
+		if len(args) > 0 {
+			// 判断是一个目录且存在
+			if ff, err := os.Stat(args[0]); err != nil || !ff.IsDir() {
+				_, err := tm.Println(tm.Color("The directory arg is not a directory or not exist.", tm.RED))
+				cobra.CheckErr(err)
+				tm.Flush()
+				return
+			}
+			gitStatus(args[0])
+		}
+		if len(fileStatusList) == 0 {
+			_, err := tm.Println(tm.Color("There is no file to commit.", tm.RED))
+			cobra.CheckErr(err)
+			tm.Flush()
+			return
+		}
+
+		if commitOpts.all {
+			for _, fs := range fileStatusList {
+				_, err := workTree.Add(fs.file)
+				cobra.CheckErr(err)
+			}
+			if commitOpts.message == "" {
+				var message string
+				prompt := &survey.Input{
+					Message: "Please input your commit message:",
+				}
+				err := survey.AskOne(prompt, &message)
+				cobra.CheckErr(err)
+				_, err = workTree.Commit(message, &git.CommitOptions{
+					Author: &object.Signature{
+						Name:  globalName,
+						Email: globalMail,
+						When:  time.Now(),
+					},
+				})
+				cobra.CheckErr(err)
+			} else {
+				_, err := workTree.Commit(commitOpts.message, &git.CommitOptions{
+					Author: &object.Signature{
+						Name:  globalName,
+						Email: globalMail,
+						When:  time.Now(),
+					},
+				})
+				cobra.CheckErr(err)
+			}
+			_, err := tm.Println(tm.Color("Commit successfully.", tm.GREEN))
+			cobra.CheckErr(err)
+			tm.Flush()
+			return
+		}
+
+		_, err := tm.Println(`The following is the file which can be committed ('Green' means added, 'Yellow' means modified, 'Red' means deleted, 'White' means untracked):`)
 		cobra.CheckErr(err)
 		commit(fileStatusList)
 		tm.Flush()
@@ -66,6 +142,12 @@ var commitCmd = &cobra.Command{
 		err = survey.AskOne(prompt, &fileIndex)
 		cobra.CheckErr(err)
 		// split by ,
+		if len(fileIndex) == 0 {
+			_, err := tm.Println(tm.Color("You don't input the serial number of the file you want to commit.", tm.RED))
+			cobra.CheckErr(err)
+			tm.Flush()
+			return
+		}
 		for _, index := range strings.Split(fileIndex, ",") {
 			i, err := strconv.Atoi(strings.TrimSpace(index))
 			cobra.CheckErr(err)
@@ -76,18 +158,6 @@ var commitCmd = &cobra.Command{
 			// add file to staging area
 			_, err = workTree.Add(fileStatusList[i-1].file)
 		}
-		// commit input email, name and message
-		//var email, name, message string
-		//prompt = &survey.Input{
-		//	Message: "Please input your email:",
-		//}
-		//err = survey.AskOne(prompt, &email)
-		//cobra.CheckErr(err)
-		//prompt = &survey.Input{
-		//	Message: "Please input your name:",
-		//}
-		//err = survey.AskOne(prompt, &name)
-		//cobra.CheckErr(err)
 
 		var message string
 		prompt = &survey.Input{
@@ -104,15 +174,19 @@ var commitCmd = &cobra.Command{
 		})
 		cobra.CheckErr(err)
 	},
+
+	Args: cobra.MaximumNArgs(1),
 }
 
 // git the status of the current repository
-func gitStatus() []fileStatus {
+func gitStatus(dir string) {
 	var err error
-	path, err := os.Getwd()
-	cobra.CheckErr(err)
+	if len(dir) == 0 {
+		dir, err = os.Getwd()
+		cobra.CheckErr(err)
+	}
 
-	r, err := git.PlainOpen(path)
+	r, err := git.PlainOpen(dir)
 	cobra.CheckErr(err)
 
 	// getCmd the worktree
@@ -122,7 +196,7 @@ func gitStatus() []fileStatus {
 	status, err := workTree.Status()
 	cobra.CheckErr(err)
 
-	var statusList []fileStatus
+	fileStatusList = make([]fileStatus, 0)
 	for file, s := range status {
 		var fs fileStatus
 		if s.Staging == git.Deleted || s.Worktree == git.Deleted {
@@ -134,10 +208,8 @@ func gitStatus() []fileStatus {
 		} else if s.Staging == git.Untracked || s.Worktree == git.Untracked {
 			fs = fileStatus{file: file, status: git.Untracked}
 		}
-		statusList = append(statusList, fs)
+		fileStatusList = append(fileStatusList, fs)
 	}
-
-	return statusList
 }
 
 // 获取git的用户名和邮箱

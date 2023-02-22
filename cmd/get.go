@@ -11,7 +11,7 @@ import (
 )
 
 var getCmd = &cobra.Command{
-	Use:   "get [url] [flags]",
+	Use:   "get [<url>] [flags]",
 	Short: "Get a file from remote repository",
 	Long: `Get a file from remote repository.
 You use the url of the file in the remote repository.
