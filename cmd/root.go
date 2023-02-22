@@ -7,10 +7,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "got",
-	Short: "got is a simple git tool",
-	Long: `got is a simple git tool,
-which can help you to commit and push your code easily.`,
+	Use:  "got <command>",
+	Long: `Simple to use Git form command line.`,
+	//DisableAutoGenTag: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -39,6 +38,7 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	//commitCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().Bool("help", false, "Show help for command")
 	rootCmd.AddCommand(commitCmd)
 	rootCmd.AddCommand(getCmd)
 }

@@ -1,2 +1,2 @@
-# ggit
+# got
 Optimize git command line tools
