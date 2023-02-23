@@ -40,6 +40,23 @@ func main() {
 	//	return
 	//}
 
+	//cmd := exec.Command("ls", "-l")
+	//cmd.Stdout = os.Stdout
+	//cmd.Stdin = os.Stdin
+	//cmd.Stderr = os.Stderr
+	//err := cmd.Run()
+	//if err != nil {
+	//	return
+	//}
+	//
+	//fmt.Println(cmd.Dir)
+	//fmt.Println(cmd.Env)
+	//fmt.Println(cmd.Process)
+	//fmt.Println(cmd.ProcessState)
+	//fmt.Println(cmd.String())
+	//fmt.Println(cmd.CombinedOutput())
+	//fmt.Println("push success")
+
 	//fmt.Println("测试")
 
 	//println(string(r))
