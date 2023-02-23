@@ -1,6 +1,9 @@
 package common
 
-import "os/exec"
+import (
+	"os"
+	"os/exec"
+)
 
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
@@ -31,6 +34,22 @@ func RemoveStringSlice(a []string, b []string) []string {
 func Push() (err error) {
 	//git push
 	cmd := exec.Command("git", "push")
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	return
+}
+
+func ShowDiff(file, hash string, add bool) (err error) {
+	//git push
+	cmd := exec.Command("git", "diff", hash, file)
+	if add {
+		cmd = exec.Command("git", "diff", file)
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	return
 }

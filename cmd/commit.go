@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"bufio"
 	"github.com/AlecAivazis/survey/v2"
 	tm "github.com/buger/goterm"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/cobra"
 	"got/common"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +14,7 @@ import (
 
 func init() {
 	globalName, globalMail = getGitConfig()
-	gitStatus("")
+	gitStatus()
 }
 
 type fileStatus struct {
@@ -63,6 +60,21 @@ func (fs fileStatus) Print(i int) {
 	}
 }
 
+func (fs fileStatus) String() string {
+	switch fs.status {
+	case git.Untracked:
+		return tm.Color(fs.file, tm.WHITE)
+	case git.Added:
+		return tm.Color(fs.file, tm.GREEN)
+	case git.Modified:
+		return tm.Color(fs.file, tm.YELLOW)
+	case git.Deleted:
+		return tm.Color(fs.file, tm.RED)
+	default:
+		return tm.Color(fs.file, tm.WHITE)
+	}
+}
+
 func commit(fileStatusList []fileStatus) {
 	for i, fs := range fileStatusList {
 		fs.Print(i + 1)
@@ -73,12 +85,10 @@ func commit(fileStatusList []fileStatus) {
 
 var commitCmd = &cobra.Command{
 	// dir非必须参数
-	Use:   "commit [<dir>] [flags]",
+	Use:   "commit [flags]",
 	Short: "Commit files to local repository",
 	Long: `This command is used to commit files to the local repository by interactive mode.
-If you appoint the directory, it will use the directory as the root directory of the repository.
-If you don't appoint the directory, it will use the current directory as the root directory of the repository.
-It can list all the files which can be committed, and you can input the file's serial number to commit, they are separated by ','.
+It can list all the files which can be committed at the current directory, and you can input the file's serial number to commit, they are separated by ','.
 And their status is distinguished by color. Green means added, Yellow means modified, Red means deleted, White means untracked.
 If you want to commit all the files, you can use the -a flag.
 If you want to commit all the files except some files, you can use the -e flag, and they are separated by ','.
@@ -86,16 +96,16 @@ If you want to push after commit, you can use the -p flag.
 If you user the -a flag or -e flag, you can also use the -m flag to appoint the commit message, if it not exist, you should input the message in the next step.
 If you use the -a flag and -e flag at the same time, it will be invalid.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 0 {
-			// 判断是一个目录且存在
-			if ff, err := os.Stat(args[0]); err != nil || !ff.IsDir() {
-				_, err := tm.Println(tm.Color("The directory arg is not a directory or not exist.", tm.RED))
-				cobra.CheckErr(err)
-				tm.Flush()
-				return
-			}
-			gitStatus(args[0])
-		}
+		//if len(args) > 0 {
+		//	// 判断是一个目录且存在
+		//	if ff, err := os.Stat(args[0]); err != nil || !ff.IsDir() {
+		//		_, err := tm.Println(tm.Color("The directory arg is not a directory or not exist.", tm.RED))
+		//		cobra.CheckErr(err)
+		//		tm.Flush()
+		//		return
+		//	}
+		//	gitStatus(args[0])
+		//}
 		if len(fileStatusList) == 0 {
 			_, err := tm.Println(tm.Color("There is no file to commit.", tm.RED))
 			cobra.CheckErr(err)
@@ -216,8 +226,8 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 		}
 		_, err := tm.Println(`The following is the file which can be committed ('Green' means added, 'Yellow' means modified, 'Red' means deleted, 'White' means untracked):`)
 		cobra.CheckErr(err)
-		commit(fileStatusList)
 		tm.Flush()
+		commit(fileStatusList)
 		var fileIndex string
 		prompt := &survey.Input{
 			Message: "Please input the serial number of the file (You can use ',' to separate you want to commit or use ';' to separate you don't want to commit):",
@@ -302,98 +312,4 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			tm.Flush()
 		}
 	},
-
-	Args: cobra.MaximumNArgs(1),
-}
-
-// git the status of the current repository
-func gitStatus(dir string) {
-	var err error
-	if len(dir) == 0 {
-		dir, err = os.Getwd()
-		cobra.CheckErr(err)
-	}
-
-	r, err := git.PlainOpen(dir)
-	cobra.CheckErr(err)
-
-	// getCmd the worktree
-	workTree, err = r.Worktree()
-	cobra.CheckErr(err)
-
-	status, err := workTree.Status()
-	cobra.CheckErr(err)
-
-	fileStatusList = make([]fileStatus, 0)
-	for file, s := range status {
-		var fs fileStatus
-		if s.Staging == git.Deleted || s.Worktree == git.Deleted {
-			fs = fileStatus{file: file, status: git.Deleted}
-		} else if s.Staging == git.Added || s.Worktree == git.Added {
-			fs = fileStatus{file: file, status: git.Added}
-		} else if s.Staging == git.Modified || s.Worktree == git.Modified {
-			fs = fileStatus{file: file, status: git.Modified}
-		} else if s.Staging == git.Untracked || s.Worktree == git.Untracked {
-			fs = fileStatus{file: file, status: git.Untracked}
-		}
-		fileStatusList = append(fileStatusList, fs)
-	}
-}
-
-// 获取git的用户名和邮箱
-func getGitConfig() (string, string) {
-	var n, e string
-	// 查看.git config文件是否存在
-	_, err := os.Stat(".git/config")
-	if err == os.ErrNotExist {
-		goto git
-	} else if err != nil {
-		cobra.CheckErr(err)
-	} else {
-		// 读取文件内容
-		file, err := os.Open(".git/config")
-		cobra.CheckErr(err)
-		defer func(file *os.File) {
-			err := file.Close()
-			if err != nil {
-				cobra.CheckErr(err)
-			}
-		}(file)
-
-		var name, email string
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, "name") {
-				name = line[strings.Index(line, "=")+1:]
-			}
-			if strings.Contains(line, "email") {
-				email = line[strings.Index(line, "=")+1:]
-			}
-		}
-		cobra.CheckErr(scanner.Err())
-
-		if name != "" && email != "" {
-			return name, email
-		} else {
-			goto git
-		}
-	}
-
-git:
-	var email, name []byte
-	// 获取系统的用户名
-	name, err = exec.Command("git", "config", "--global", "user.name").Output()
-	cobra.CheckErr(err)
-	// 获取系统的邮箱
-	email, err = exec.Command("git", "config", "--global", "user.email").Output()
-	cobra.CheckErr(err)
-
-	if e == "" && n == "" {
-		return strings.TrimSpace(string(name)), strings.TrimSpace(string(email))
-	} else if e == "" {
-		return n, strings.TrimSpace(string(email))
-	} else {
-		return strings.TrimSpace(string(name)), e
-	}
 }
