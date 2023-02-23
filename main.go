@@ -25,6 +25,25 @@ func main() {
 	//treePath := os.Args[3]
 
 	cmd.Execute()
+	//r, err := exec.Command("git", "show", "--color", "--pretty=format:%b", "5c5b17f", "cmd/commit.go").Output()
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	// 将结果绘制在新终端中并等待其退出
+	//cmd := exec.Command("git", "show", "--color", "--pretty=format:%b", "5c5b17f", "cmd/commit.go")
+	//cmd.Stdout = os.Stdout
+	//cmd.Stdin = os.Stdin
+	//cmd.Stderr = os.Stderr
+	//err := cmd.Run()
+	//if err != nil {
+	//	return
+	//}
+
+	//fmt.Println("测试")
+
+	//println(string(r))
+	//println(""
 
 	//path := "/home/duty/go/src/got"
 	//
