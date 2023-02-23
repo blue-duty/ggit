@@ -1,5 +1,7 @@
 package common
 
+import "os/exec"
+
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -24,4 +26,11 @@ func RemoveStringSlice(a []string, b []string) []string {
 		}
 	}
 	return a
+}
+
+func Push() (err error) {
+	//git push
+	cmd := exec.Command("git", "push")
+	err = cmd.Run()
+	return
 }

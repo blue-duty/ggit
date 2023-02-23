@@ -7,6 +7,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/cobra"
+	"got/common"
 	"os"
 	"os/exec"
 	"strconv"
@@ -28,6 +29,7 @@ type commitOptions struct {
 	except  string
 	all     bool
 	message string
+	push    bool
 }
 
 var commitOpts = &commitOptions{}
@@ -36,6 +38,7 @@ func init() {
 	commitCmd.Flags().StringVarP(&commitOpts.except, "except", "e", "", "except files")
 	commitCmd.Flags().BoolVarP(&commitOpts.all, "all", "a", false, "commit all files")
 	commitCmd.Flags().StringVarP(&commitOpts.message, "message", "m", "", "commit message")
+	commitCmd.Flags().BoolVarP(&commitOpts.push, "push", "p", false, "push to remote repository")
 }
 
 // Print fileStatus print
@@ -79,6 +82,7 @@ It can list all the files which can be committed, and you can input the file's s
 And their status is distinguished by color. Green means added, Yellow means modified, Red means deleted, White means untracked.
 If you want to commit all the files, you can use the -a flag.
 If you want to commit all the files except some files, you can use the -e flag, and they are separated by ','.
+If you want to push after commit, you can use the -p flag.
 If you user the -a flag or -e flag, you can also use the -m flag to appoint the commit message, if it not exist, you should input the message in the next step.
 If you use the -a flag and -e flag at the same time, it will be invalid.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -139,6 +143,18 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			_, err := tm.Println(tm.Color("Commit successfully.", tm.GREEN))
 			cobra.CheckErr(err)
 			tm.Flush()
+			if commitOpts.push {
+				err := common.Push()
+				if err != nil {
+					_, err := tm.Println(tm.Color("Push failed.", tm.RED))
+					cobra.CheckErr(err)
+					tm.Flush()
+					return
+				}
+				_, err = tm.Println(tm.Color("Push successfully.", tm.GREEN))
+				cobra.CheckErr(err)
+				tm.Flush()
+			}
 			return
 		}
 		if commitOpts.except != "" {
@@ -184,6 +200,18 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			_, err := tm.Println(tm.Color("Commit successfully.", tm.GREEN))
 			cobra.CheckErr(err)
 			tm.Flush()
+			if commitOpts.push {
+				err := common.Push()
+				if err != nil {
+					_, err := tm.Println(tm.Color("Push failed.", tm.RED))
+					cobra.CheckErr(err)
+					tm.Flush()
+					return
+				}
+				_, err = tm.Println(tm.Color("Push successfully.", tm.GREEN))
+				cobra.CheckErr(err)
+				tm.Flush()
+			}
 			return
 		}
 		_, err := tm.Println(`The following is the file which can be committed ('Green' means added, 'Yellow' means modified, 'Red' means deleted, 'White' means untracked):`)
@@ -258,6 +286,21 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			},
 		})
 		cobra.CheckErr(err)
+		_, err = tm.Println(tm.Color("Commit successfully.", tm.GREEN))
+		cobra.CheckErr(err)
+
+		if commitOpts.push {
+			err := common.Push()
+			if err != nil {
+				_, err := tm.Println(tm.Color("Push failed.", tm.RED))
+				cobra.CheckErr(err)
+				tm.Flush()
+				return
+			}
+			_, err = tm.Println(tm.Color("Push successfully.", tm.GREEN))
+			cobra.CheckErr(err)
+			tm.Flush()
+		}
 	},
 
 	Args: cobra.MaximumNArgs(1),
