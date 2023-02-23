@@ -21,11 +21,16 @@ var statusCmd = &cobra.Command{
 	Long: `Show the working tree status.
 This command shows the working tree status.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(fileStatusList) == 0 {
+			_, err := tm.Println(tm.Color("There is no file to commit.", tm.RED))
+			cobra.CheckErr(err)
+			tm.Flush()
+			return
+		}
 		_, err := tm.Println(`The following is the file which can be committed ('Green' means added, 'Yellow' means modified, 'Red' means deleted, 'White' means untracked):`)
 		cobra.CheckErr(err)
 		tm.Flush()
 		commit(fileStatusList)
-
 		for {
 			prompt := &survey.Input{
 				Message: "You can input the serial number of the file to show the diff, or input 'q' to quit:",
@@ -73,10 +78,10 @@ func init() {
 	head, err := workRepo.Head()
 	cobra.CheckErr(err)
 
-	c, err := workRepo.CommitObject(head.Hash())
-	cobra.CheckErr(err)
-
-	cc, err := c.Parent(0)
-	cobra.CheckErr(err)
-	parentCommit = cc.Hash.String()
+	//c, err := workRepo.CommitObject(head.Hash())
+	//cobra.CheckErr(err)
+	//
+	//cc, err := c.Parent(0)
+	//cobra.CheckErr(err)
+	parentCommit = head.Hash().String()
 }
