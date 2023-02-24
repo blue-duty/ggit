@@ -129,11 +129,6 @@ func getFile(getOpts *getOptions) error {
 
 		getOpts.output = path.Join(dir, fileName)
 
-		// 下载文件
-		//if err := DownloadFile(getOpts); err != nil {
-		//	return err
-		//}
-
 		// 使用curl下载文件
 		if err := exec.Command("curl", "-o", getOpts.output, getOpts.url).Run(); err != nil {
 			return err
@@ -141,83 +136,3 @@ func getFile(getOpts *getOptions) error {
 	}
 	return nil
 }
-
-/* la ji http
-func DownloadFile(getOpts *getOptions) error {
-	// Disable SSL verification to allow insecure connections
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	// Create HTTP client with custom transport
-	client := &http.Client{Transport: transport}
-
-	// Send request
-	resp, err := client.Get(getOpts.url)
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			//panic(err)
-			logrus.Error(err)
-		}
-	}(resp.Body)
-
-	// Create output file
-	out, err := os.Create(getOpts.output)
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-	defer func(out *os.File) {
-		err := out.Close()
-		if err != nil {
-			//panic(err)
-			logrus.Error(err)
-		}
-	}(out)
-
-	// Copy response body to output file
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-
-	return nil
-}
-
-func Ttt() {
-	var getOpts = &getOptions{
-		//output: "/home/duty/Downloads/gitnote-config.md",
-		url: "https://github.com/blue-duty/my_note/blob/master/gitnote-config.md",
-	}
-
-	getOpts.url = strings.Replace(getOpts.url, "github.com", "raw.githubusercontent.com", 1)
-	getOpts.url = strings.Replace(getOpts.url, "blob/", "", 1)
-	fmt.Println(getOpts.url)
-	//err := DownloadFile(getOpts)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-
-	t1 := time.Now()
-	//err := DownloadFile(getOpts)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//if err := exec.Command("curl", "-o", getOpts.output, getOpts.url).Run(); err != nil {
-	//	fmt.Println(err)
-	//}
-	err := getFile(getOpts)
-	if err != nil {
-		fmt.Println(err)
-	}
-	t2 := time.Now()
-	fmt.Println(t2.Sub(t1))
-}
-
-*/
