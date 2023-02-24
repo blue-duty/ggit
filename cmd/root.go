@@ -56,6 +56,7 @@ func init() {
 	rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(logCmd)
 }
 
 // git the status of the current repository
