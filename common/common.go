@@ -1,8 +1,11 @@
 package common
 
 import (
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func StringInSlice(a string, list []string) bool {
@@ -51,5 +54,47 @@ func ShowDiff(file, hash string, add bool) (err error) {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
+	return
+}
+
+func ShowLog(head, pHash, file string) (err error) {
+	//git push
+	cmd := exec.Command("git", "diff", pHash, head, file)
+	if pHash == "" {
+		cmd = exec.Command("git", "diff", head, file)
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	return
+}
+
+func Indent(t string) string {
+	var output []string
+	for _, line := range strings.Split(t, "\n") {
+		if len(line) != 0 {
+			line = "    " + line
+		}
+
+		output = append(output, line)
+	}
+
+	return strings.Join(output, "\n")
+}
+
+func GetFileChangeByCommit(repo *git.Repository, commitHash string) (fileChange []string, err error) {
+	commit, err := repo.CommitObject(plumbing.NewHash(commitHash))
+	if err != nil {
+		return
+	}
+	fileState, err := commit.Stats()
+	if err != nil {
+		return
+	}
+
+	for _, file := range fileState {
+		fileChange = append(fileChange, file.Name)
+	}
 	return
 }

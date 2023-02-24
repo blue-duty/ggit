@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/buger/goterm v1.0.4
 	github.com/emirpasic/gods v1.18.1
 	github.com/go-git/go-billy/v5 v5.4.1
