@@ -42,6 +42,11 @@ If you use '-d' to filter the commit logs, you can input a date or a date range 
 		if logOpts.number == 0 {
 			logOpts.number = 10
 		}
+		if logOpts.number < 0 {
+			_, err := tm.Println(tm.Color("Invalid number", tm.RED))
+			cobra.CheckErr(err)
+			return
+		}
 		if logOpts.author != "" && logOpts.email != "" {
 			_, err := tm.Println(tm.Color("You can't use '-a' and '-e' at the same time", tm.RED))
 			cobra.CheckErr(err)
@@ -91,12 +96,14 @@ If you use '-d' to filter the commit logs, you can input a date or a date range 
 			if logOpts.email != "" && c.Author.Email != logOpts.email {
 				return nil
 			}
-			// 放入commitLogs
-			commitLogs = append(commitLogs, c.Hash.String()[0:8])
 			// 放入logHashes
 			logHashes[c.Hash.String()[0:8]] = c.Hash.String()
-			_, err2 := fmt.Fprintf(totals, "%s\t%s\t%s\t%s\n", c.Hash.String()[:8], c.Author.When.Format(DateFormat), c.Author.Name+" <"+c.Author.Email+">", c.Message)
-			cobra.CheckErr(err2)
+			if logOpts.number > len(commitLogs) {
+				// 放入commitLogs
+				commitLogs = append(commitLogs, c.Hash.String()[0:8])
+				_, err2 := fmt.Fprintf(totals, "%s\t%s\t%s\t%s\n", c.Hash.String()[:8], c.Author.When.Format(DateFormat), c.Author.Name+" <"+c.Author.Email+">", c.Message)
+				cobra.CheckErr(err2)
+			}
 			return nil
 		})
 		cobra.CheckErr(err)
