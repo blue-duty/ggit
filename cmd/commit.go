@@ -12,11 +12,6 @@ import (
 	"time"
 )
 
-func init() {
-	globalName, globalMail = getGitConfig()
-	gitStatus()
-}
-
 type fileStatus struct {
 	file   string
 	status git.StatusCode
@@ -32,9 +27,10 @@ type commitOptions struct {
 var commitOpts = &commitOptions{}
 
 func init() {
+	globalName, globalMail = getGitConfig()
 	commitCmd.Flags().StringVarP(&commitOpts.except, "except", "e", "", "except files")
-	commitCmd.Flags().BoolVarP(&commitOpts.all, "all", "a", false, "commit all files")
-	commitCmd.Flags().StringVarP(&commitOpts.message, "message", "m", "", "commit message")
+	commitCmd.Flags().BoolVarP(&commitOpts.all, "all", "a", false, "printStatus all files")
+	commitCmd.Flags().StringVarP(&commitOpts.message, "message", "m", "", "printStatus message")
 	commitCmd.Flags().BoolVarP(&commitOpts.push, "push", "p", false, "push to remote repository")
 }
 
@@ -45,18 +41,23 @@ func (fs fileStatus) Print(i int) {
 		// print serial number and file name and format alignment
 		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.WHITE))
 		cobra.CheckErr(err)
+		tm.Flush()
 	case git.Added:
 		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.GREEN))
 		cobra.CheckErr(err)
+		tm.Flush()
 	case git.Modified:
 		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.YELLOW))
 		cobra.CheckErr(err)
+		tm.Flush()
 	case git.Deleted:
 		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.RED))
 		cobra.CheckErr(err)
+		tm.Flush()
 	default:
-		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.WHITE))
+		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.BLACK))
 		cobra.CheckErr(err)
+		tm.Flush()
 	}
 }
 
@@ -75,11 +76,10 @@ func (fs fileStatus) String() string {
 	}
 }
 
-func commit(fileStatusList []fileStatus) {
+func printStatus(fileStatusList []fileStatus) {
 	for i, fs := range fileStatusList {
 		fs.Print(i + 1)
 	}
-
 	tm.Flush()
 }
 
@@ -87,13 +87,13 @@ var commitCmd = &cobra.Command{
 	// dir非必须参数
 	Use:   "commit [flags]",
 	Short: "Commit files to local repository",
-	Long: `This command is used to commit files to the local repository by interactive mode.
-It can list all the files which can be committed at the current directory, and you can input the file's serial number to commit, they are separated by ','.
+	Long: `This command is used to printStatus files to the local repository by interactive mode.
+It can list all the files which can be committed at the current directory, and you can input the file's serial number to printStatus, they are separated by ','.
 And their status is distinguished by color. Green means added, Yellow means modified, Red means deleted, White means untracked.
-If you want to commit all the files, you can use the -a flag.
-If you want to commit all the files except some files, you can use the -e flag, and they are separated by ','.
-If you want to push after commit, you can use the -p flag.
-If you user the -a flag or -e flag, you can also use the -m flag to appoint the commit message, if it not exist, you should input the message in the next step.
+If you want to printStatus all the files, you can use the -a flag.
+If you want to printStatus all the files except some files, you can use the -e flag, and they are separated by ','.
+If you want to push after printStatus, you can use the -p flag.
+If you user the -a flag or -e flag, you can also use the -m flag to appoint the printStatus message, if it not exist, you should input the message in the next step.
 If you use the -a flag and -e flag at the same time, it will be invalid.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		//if len(args) > 0 {
@@ -106,13 +106,6 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 		//	}
 		//	gitStatus(args[0])
 		//}
-		if len(fileStatusList) == 0 {
-			_, err := tm.Println(tm.Color("There is no file to commit.", tm.RED))
-			cobra.CheckErr(err)
-			tm.Flush()
-			return
-		}
-
 		if commitOpts.except != "" && commitOpts.all {
 			_, err := tm.Println(tm.Color("The except and all flags can't be used at the same time.", tm.RED))
 			cobra.CheckErr(err)
@@ -121,14 +114,14 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 		}
 
 		if commitOpts.all {
-			for _, fs := range fileStatusList {
-				_, err := workTree.Add(fs.file)
-				cobra.CheckErr(err)
-			}
+			err := workTree.AddWithOptions(&git.AddOptions{
+				All: true,
+			})
+			cobra.CheckErr(err)
 			if commitOpts.message == "" {
 				var message string
 				prompt := &survey.Input{
-					Message: "Please input your commit message:",
+					Message: "Please input your printStatus message:",
 				}
 				err := survey.AskOne(prompt, &message)
 				cobra.CheckErr(err)
@@ -150,7 +143,7 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 				})
 				cobra.CheckErr(err)
 			}
-			_, err := tm.Println(tm.Color("Commit successfully.", tm.GREEN))
+			_, err = tm.Println(tm.Color("Commit successfully.", tm.GREEN))
 			cobra.CheckErr(err)
 			tm.Flush()
 			if commitOpts.push {
@@ -167,6 +160,7 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			}
 			return
 		}
+
 		if commitOpts.except != "" {
 			//exceptFiles := strings.Split(commitOpts.except, ",")
 			eMap := make(map[string]bool)
@@ -176,7 +170,7 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			}
 			for _, fs := range fileStatusList {
 				// get the file name
-				fn := fs.file[strings.LastIndex(fs.file, "/")+1:]
+				fn := fs.file
 				if _, ok := eMap[fn]; !ok {
 					_, err := workTree.Add(fs.file)
 					cobra.CheckErr(err)
@@ -224,10 +218,12 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			}
 			return
 		}
-		_, err := tm.Println(`The following is the file which can be committed ('Green' means added, 'Yellow' means modified, 'Red' means deleted, 'White' means untracked):`)
+
+		gitStatus()
+		_, err := tm.Println(`The following is the file which can be committed: `)
 		cobra.CheckErr(err)
 		tm.Flush()
-		commit(fileStatusList)
+		printStatus(fileStatusList)
 		var fileIndex string
 		prompt := &survey.Input{
 			Message: "Please input the serial number of the file (You can use ',' to separate you want to commit or use ';' to separate you don't want to commit):",

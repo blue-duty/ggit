@@ -44,12 +44,9 @@ func Push() (err error) {
 	return
 }
 
-func ShowDiff(file, hash string, add bool) (err error) {
+func ShowDiff(file, hash string) (err error) {
 	//git push
 	cmd := exec.Command("git", "diff", hash, file)
-	if add {
-		cmd = exec.Command("git", "diff", file)
-	}
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
@@ -71,16 +68,27 @@ func ShowLog(head, pHash, file string) (err error) {
 }
 
 func Indent(t string) string {
-	var output []string
+	var output string
+	if strings.Contains(t, "\r\n") {
+		t = strings.ReplaceAll(t, "\r\n", "\n")
+	}
 	for _, line := range strings.Split(t, "\n") {
 		if len(line) != 0 {
-			line = "    " + line
+			line = " " + line
 		}
-
-		output = append(output, line)
+		output += line
 	}
 
-	return strings.Join(output, "\n")
+	return output
+}
+
+func GitRestore(file string) (err error) {
+	cmd := exec.Command("git", "restore", file)
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	return
 }
 
 func GetFileChangeByCommit(repo *git.Repository, commitHash string) (fileChange []string, err error) {

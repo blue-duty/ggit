@@ -21,16 +21,25 @@ var statusCmd = &cobra.Command{
 	Long: `Show the working tree status.
 This command shows the working tree status.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		gitStatus()
+		for k, f := range fileStatusList {
+			files[strconv.Itoa(k+1)] = f
+		}
+
+		head, err := workRepo.Head()
+		cobra.CheckErr(err)
+
+		parentCommit = head.Hash().String()
 		if len(fileStatusList) == 0 {
-			_, err := tm.Println(tm.Color("There is no file to commit.", tm.RED))
+			_, err := tm.Println(tm.Color("There is no file to show status.", tm.RED))
 			cobra.CheckErr(err)
 			tm.Flush()
 			return
 		}
-		_, err := tm.Println(`The following is the file which can be committed ('Green' means added, 'Yellow' means modified, 'Red' means deleted, 'White' means untracked):`)
+		_, err = tm.Println(`The following is the all status of the files which are not Unmodified.`)
 		cobra.CheckErr(err)
 		tm.Flush()
-		commit(fileStatusList)
+		printStatus(fileStatusList)
 		for {
 			prompt := &survey.Input{
 				Message: "You can input the serial number of the file to show the diff, or input 'q' to quit:",
@@ -46,18 +55,25 @@ This command shows the working tree status.`,
 			}
 
 			if _, ok := files[statusOpts.selectedFile]; ok {
-				add := false
 				if files[statusOpts.selectedFile].status == git.Added {
-					add = true
+					_, err := tm.Println(tm.Color("The file has been added, so there is no diff.", tm.RED))
+					cobra.CheckErr(err)
+					tm.Flush()
+					continue
+				}
+				if files[statusOpts.selectedFile].status == git.Untracked {
+					_, err := tm.Println(tm.Color("The file is untracked, so there is no diff.", tm.RED))
+					cobra.CheckErr(err)
+					tm.Flush()
+					continue
 				}
 				if files[statusOpts.selectedFile].status == git.Deleted {
 					_, err := tm.Println(tm.Color("The file has been deleted, so there is no diff.", tm.RED))
 					cobra.CheckErr(err)
 					tm.Flush()
 					continue
-					//add = true
 				}
-				err := common.ShowDiff(files[statusOpts.selectedFile].file, parentCommit, add)
+				err := common.ShowDiff(files[statusOpts.selectedFile].file, parentCommit)
 				if err != nil {
 					return
 				}
@@ -68,20 +84,4 @@ This command shows the working tree status.`,
 			}
 		}
 	},
-}
-
-func init() {
-	for k, f := range fileStatusList {
-		files[strconv.Itoa(k+1)] = f
-	}
-
-	head, err := workRepo.Head()
-	cobra.CheckErr(err)
-
-	//c, err := workRepo.CommitObject(head.Hash())
-	//cobra.CheckErr(err)
-	//
-	//cc, err := c.Parent(0)
-	//cobra.CheckErr(err)
-	parentCommit = head.Hash().String()
 }

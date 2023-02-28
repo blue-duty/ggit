@@ -16,8 +16,8 @@ var rootCmd = &cobra.Command{
 	Long:                  `Simple to use Git form command line.`,
 	DisableFlagsInUseLine: true,
 	SilenceUsage:          true,
-	Example: `  # Enter interactive mode to commit
-  $ got commit
+	Example: `  # Enter interactive mode to printStatus
+  $ got printStatus
   # Enter interactive mode to cat the diff of the file
   $ got status`,
 }
@@ -42,21 +42,6 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(commitCmd)
-	rootCmd.AddCommand(getCmd)
-	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(completionCmd)
-	rootCmd.AddCommand(logCmd)
-}
-
-// git the status of the current repository
-func gitStatus() {
-	var err error
-	//if len(dir) == 0 {
-	//	dir, err = os.Getwd()
-	//	cobra.CheckErr(err)
-	//}
-
 	dir, err := os.Getwd()
 	cobra.CheckErr(err)
 	// is git repository
@@ -73,11 +58,31 @@ func gitStatus() {
 	// getCmd the worktree
 	workTree, err = workRepo.Worktree()
 	cobra.CheckErr(err)
+	rootCmd.AddCommand(commitCmd)
+	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(logCmd)
+}
+
+// git the status of the current repository
+func gitStatus() {
+	var err error
+	//if len(dir) == 0 {
+	//	dir, err = os.Getwd()
+	//	cobra.CheckErr(err)
+	//}
 
 	status, err := workTree.Status()
 	cobra.CheckErr(err)
 
 	fileStatusList = make([]fileStatus, 0)
+	if len(status) == 0 {
+		_, err := tm.Println(tm.Color("There is no file to printStatus.", tm.RED))
+		cobra.CheckErr(err)
+		tm.Flush()
+		os.Exit(1)
+	}
 	for file, s := range status {
 		var fs fileStatus
 		if s.Staging == git.Deleted || s.Worktree == git.Deleted {
