@@ -1,11 +1,13 @@
 package common
 
 import (
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"os"
 	"os/exec"
+
 	"strings"
+
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 func StringInSlice(a string, list []string) bool {
@@ -68,18 +70,19 @@ func ShowLog(head, pHash, file string) (err error) {
 }
 
 func Indent(t string) string {
-	var output string
 	if strings.Contains(t, "\r\n") {
 		t = strings.ReplaceAll(t, "\r\n", "\n")
 	}
-	for _, line := range strings.Split(t, "\n") {
-		if len(line) != 0 {
-			line = " " + line
-		}
-		output += line
+
+	if strings.Contains(t, "\r") {
+		t = strings.ReplaceAll(t, "\r", "\n")
 	}
 
-	return output
+	if strings.Contains(t, " ") {
+		t = strings.ReplaceAll(t, " ", "\n")
+	}
+
+	return strings.ReplaceAll(t, "\n", ",")
 }
 
 func GitRestore(file string) (err error) {

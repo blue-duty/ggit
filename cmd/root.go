@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"bufio"
-	tm "github.com/buger/goterm"
-	"github.com/go-git/go-git/v5"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	tm "github.com/buger/goterm"
+	"github.com/go-git/go-git/v5"
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
@@ -16,8 +17,8 @@ var rootCmd = &cobra.Command{
 	Long:                  `Simple to use Git form command line.`,
 	DisableFlagsInUseLine: true,
 	SilenceUsage:          true,
-	Example: `  # Enter interactive mode to printStatus
-  $ got printStatus
+	Example: `  # Enter interactive mode to commit
+  $ got commit
   # Enter interactive mode to cat the diff of the file
   $ got status`,
 }
@@ -42,6 +43,14 @@ var (
 )
 
 func init() {
+	rootCmd.AddCommand(commitCmd)
+	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(logCmd)
+}
+
+func newWorkTree() {
 	dir, err := os.Getwd()
 	cobra.CheckErr(err)
 	// is git repository
@@ -58,20 +67,11 @@ func init() {
 	// getCmd the worktree
 	workTree, err = workRepo.Worktree()
 	cobra.CheckErr(err)
-	rootCmd.AddCommand(commitCmd)
-	rootCmd.AddCommand(getCmd)
-	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(completionCmd)
-	rootCmd.AddCommand(logCmd)
 }
 
 // git the status of the current repository
 func gitStatus() {
 	var err error
-	//if len(dir) == 0 {
-	//	dir, err = os.Getwd()
-	//	cobra.CheckErr(err)
-	//}
 
 	status, err := workTree.Status()
 	cobra.CheckErr(err)

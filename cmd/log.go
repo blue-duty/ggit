@@ -2,16 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"got/common"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/AlecAivazis/survey/v2"
 	tm "github.com/buger/goterm"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"got/common"
-	"os"
-	"strings"
-	"time"
 )
 
 type logOptions struct {
@@ -33,6 +34,8 @@ Also you can use '-n <number>' to show the last <number> printStatus logs.
 And '-e','-d','-a' can be used to filter the printStatus logs, but you can't use '-a' and '-e' at the same time.
 If you use '-d' to filter the printStatus logs, you can input a date or a date range to filter the printStatus logs, like '2020-01-01' or '2020-01-01..2020-01-31'.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		newWorkTree()
+
 		var (
 			startDate, endDate time.Time
 			err                error
@@ -120,7 +123,7 @@ If you use '-d' to filter the printStatus logs, you can input a date or a date r
 				// 放入commitLogs
 				commitLogs = append(commitLogs, c.Hash.String()[0:8])
 				// 放入data
-				data = append(data, []string{c.Hash.String()[0:8], c.Author.When.Format(DateFormat), c.Author.Name + " <" + c.Author.Email + ">", c.Message})
+				data = append(data, []string{c.Hash.String()[0:8], c.Author.When.Format(DateFormat), c.Author.Name + " <" + c.Author.Email + ">", common.Indent(c.Message)})
 				//_, err2 := fmt.Fprintf(totals, "%s\t%s\t%s\t%s\n", c.Hash.String()[:8], c.Author.When.Format(DateFormat), c.Author.Name+" <"+c.Author.Email+">", c.Message)
 				//cobra.CheckErr(err2)
 			}

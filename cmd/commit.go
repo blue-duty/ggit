@@ -1,15 +1,16 @@
 package cmd
 
 import (
+	"got/common"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/AlecAivazis/survey/v2"
 	tm "github.com/buger/goterm"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/cobra"
-	"got/common"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type fileStatus struct {
@@ -29,8 +30,8 @@ var commitOpts = &commitOptions{}
 func init() {
 	globalName, globalMail = getGitConfig()
 	commitCmd.Flags().StringVarP(&commitOpts.except, "except", "e", "", "except files")
-	commitCmd.Flags().BoolVarP(&commitOpts.all, "all", "a", false, "printStatus all files")
-	commitCmd.Flags().StringVarP(&commitOpts.message, "message", "m", "", "printStatus message")
+	commitCmd.Flags().BoolVarP(&commitOpts.all, "all", "a", false, "commit all files")
+	commitCmd.Flags().StringVarP(&commitOpts.message, "message", "m", "", "commit message")
 	commitCmd.Flags().BoolVarP(&commitOpts.push, "push", "p", false, "push to remote repository")
 }
 
@@ -87,31 +88,23 @@ var commitCmd = &cobra.Command{
 	// dir非必须参数
 	Use:   "commit [flags]",
 	Short: "Commit files to local repository",
-	Long: `This command is used to printStatus files to the local repository by interactive mode.
-It can list all the files which can be committed at the current directory, and you can input the file's serial number to printStatus, they are separated by ','.
+	Long: `This command is used to commit files to the local repository by interactive mode.
+It can list all the files which can be committed at the current directory, and you can input the file's serial number to commit, they are separated by ','.
 And their status is distinguished by color. Green means added, Yellow means modified, Red means deleted, White means untracked.
-If you want to printStatus all the files, you can use the -a flag.
-If you want to printStatus all the files except some files, you can use the -e flag, and they are separated by ','.
-If you want to push after printStatus, you can use the -p flag.
-If you user the -a flag or -e flag, you can also use the -m flag to appoint the printStatus message, if it not exist, you should input the message in the next step.
+If you want to commit all the files, you can use the -a flag.
+If you want to commit all the files except some files, you can use the -e flag, and they are separated by ','.
+If you want to push after commit, you can use the -p flag.
+If you user the -a flag or -e flag, you can also use the -m flag to appoint the commit message, if it not exist, you should input the message in the next step.
 If you use the -a flag and -e flag at the same time, it will be invalid.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		//if len(args) > 0 {
-		//	// 判断是一个目录且存在
-		//	if ff, err := os.Stat(args[0]); err != nil || !ff.IsDir() {
-		//		_, err := tm.Println(tm.Color("The directory arg is not a directory or not exist.", tm.RED))
-		//		cobra.CheckErr(err)
-		//		tm.Flush()
-		//		return
-		//	}
-		//	gitStatus(args[0])
-		//}
 		if commitOpts.except != "" && commitOpts.all {
 			_, err := tm.Println(tm.Color("The except and all flags can't be used at the same time.", tm.RED))
 			cobra.CheckErr(err)
 			tm.Flush()
 			return
 		}
+
+		newWorkTree()
 
 		if commitOpts.all {
 			err := workTree.AddWithOptions(&git.AddOptions{
@@ -121,7 +114,7 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			if commitOpts.message == "" {
 				var message string
 				prompt := &survey.Input{
-					Message: "Please input your printStatus message:",
+					Message: "Please input your commit message:",
 				}
 				err := survey.AskOne(prompt, &message)
 				cobra.CheckErr(err)
@@ -161,8 +154,8 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			return
 		}
 
+		gitStatus()
 		if commitOpts.except != "" {
-			//exceptFiles := strings.Split(commitOpts.except, ",")
 			eMap := make(map[string]bool)
 			exceptFiles := strings.Split(commitOpts.except, ",")
 			for _, e := range exceptFiles {
@@ -219,7 +212,6 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			return
 		}
 
-		gitStatus()
 		_, err := tm.Println(`The following is the file which can be committed: `)
 		cobra.CheckErr(err)
 		tm.Flush()
@@ -275,6 +267,7 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 
 				// add file to staging area
 				_, err = workTree.Add(fileStatusList[i-1].file)
+				cobra.CheckErr(err)
 			}
 		}
 

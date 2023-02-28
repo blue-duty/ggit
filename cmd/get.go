@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"context"
 	"errors"
-	tm "github.com/buger/goterm"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+	"time"
+
+	tm "github.com/buger/goterm"
+	"github.com/spf13/cobra"
 )
 
 var getCmd = &cobra.Command{
@@ -35,12 +38,14 @@ With '--output' flag, it will output the file to the specified path.`,
 type getOptions struct {
 	output string
 	url    string
+	proxy  string
 }
 
 var getOpts = &getOptions{}
 
 func init() {
 	getCmd.Flags().StringVarP(&getOpts.output, "output", "o", "", "output file path")
+	getCmd.Flags().StringVarP(&getOpts.proxy, "proxy", "p", "", "proxy url")
 }
 
 func get(getOpts *getOptions) error {
@@ -58,10 +63,7 @@ func get(getOpts *getOptions) error {
 }
 
 func isNotURL(url string) bool {
-	if strings.HasPrefix(url, "https://") {
-		return false
-	}
-	return true
+	return !strings.HasPrefix(url, "https://")
 }
 
 func getFile(getOpts *getOptions) error {
@@ -93,16 +95,6 @@ func getFile(getOpts *getOptions) error {
 				return err
 			}
 		}
-
-		// 下载文件
-		//if err := DownloadFile(getOpts); err != nil {
-		//	return err
-		//}
-
-		// 使用curl下载文件
-		if err := exec.Command("curl", "-o", getOpts.output, getOpts.url).Run(); err != nil {
-			return err
-		}
 	} else {
 		// download to current path
 		// 取出文件名
@@ -128,11 +120,30 @@ func getFile(getOpts *getOptions) error {
 		}
 
 		getOpts.output = path.Join(dir, fileName)
-
-		// 使用curl下载文件
-		if err := exec.Command("curl", "-o", getOpts.output, getOpts.url).Run(); err != nil {
-			return err
-		}
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var cmd *exec.Cmd
+	if len(getOpts.proxy) > 0 {
+		cmd = exec.CommandContext(ctx, "curl", "-x", getOpts.proxy, "-o", getOpts.output, getOpts.url)
+	} else {
+		cmd = exec.CommandContext(context.TODO(), "curl", "-o", getOpts.output, getOpts.url)
+	}
+
+	tm.Println(tm.Color("Downloading...", tm.GREEN))
+	tm.Flush()
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	if ctx.Err() == context.DeadlineExceeded {
+		tm.Println(tm.Color("Download timeout.You can try again with a proxy.", tm.RED))
+		tm.Flush()
+	}
+
+	tm.Println(tm.Color("Download success.The file is saved in "+getOpts.output, tm.GREEN))
+	tm.Flush()
+
 	return nil
 }

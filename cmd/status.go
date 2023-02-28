@@ -1,12 +1,13 @@
 package cmd
 
 import (
+	"got/common"
+	"strconv"
+
 	"github.com/AlecAivazis/survey/v2"
 	tm "github.com/buger/goterm"
 	"github.com/go-git/go-git/v5"
 	"github.com/spf13/cobra"
-	"got/common"
-	"strconv"
 )
 
 type statusOptions struct {
@@ -21,6 +22,7 @@ var statusCmd = &cobra.Command{
 	Long: `Show the working tree status.
 This command shows the working tree status.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		newWorkTree()
 		gitStatus()
 		for k, f := range fileStatusList {
 			files[strconv.Itoa(k+1)] = f
