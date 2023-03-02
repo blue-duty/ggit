@@ -258,13 +258,10 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 				fsl = append(fsl[:i-1], fsl[i:]...)
 			}
 			for _, fs := range fsl {
-				_, err = tm.Println(fs.file)
-				cobra.CheckErr(err)
-				tm.Flush()
 				_, err := workTree.Add(fs.file)
 				cobra.CheckErr(err)
+				fmt.Printf("Add %s to staging area successfully.\n", fs.file)
 			}
-
 		} else {
 			for _, index := range strings.Split(fileIndex, ",") {
 				if len(strings.TrimSpace(index)) == 0 {
