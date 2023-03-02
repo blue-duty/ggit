@@ -20,29 +20,37 @@ type logOptions struct {
 	author string
 	date   string
 	email  string
+	file   string
 }
 
 var logOpts = &logOptions{}
 
 var logCmd = &cobra.Command{
 	Use:   "log",
-	Short: "Show printStatus logs",
-	Long: `Show printStatus logs.
-You can input a printStatus hash to show the file which is changed in this printStatus.
-After that, you can select a file to show the diff in this printStatus.
-Also you can use '-n <number>' to show the last <number> printStatus logs.
-And '-e','-d','-a' can be used to filter the printStatus logs, but you can't use '-a' and '-e' at the same time.
-If you use '-d' to filter the printStatus logs, you can input a date or a date range to filter the printStatus logs, like '2020-01-01' or '2020-01-01..2020-01-31'.`,
+	Short: "Show commit logs",
+	Long: `Show commit logs.
+You can input a commit hash to show the file which is changed in this commit.
+After that, you can select a file to show the diff in this commit.
+Also you can use '-n <number>' to show the last <number> commit logs.
+And '-e','-d','-a' can be used to filter the commit logs, but you can't use '-a' and '-e' at the same time.
+If you use '-d' to filter the commit logs, you can input a date or a date range to filter the commit logs, like '2020-01-01' or '2020-01-01..2020-01-31'.
+If you use '-f' to filter the commit logs, you can input a file path to filter the commit logs.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newWorkTree()
-
 		var (
 			startDate, endDate time.Time
 			err                error
 		)
-		clogs, err := workRepo.Log(&git.LogOptions{
-			All: true,
-		})
+
+		ref, err := workRepo.Head()
+		cobra.CheckErr(err)
+		var gitLogOpts = git.LogOptions{
+			All:   true,
+			From:  ref.Hash(),
+			Order: git.LogOrderCommitterTime,
+		}
+
+		clogs, err := workRepo.Log(&gitLogOpts)
 		cobra.CheckErr(err)
 		err = clogs.ForEach(func(c *object.Commit) error {
 			completedLogHashes = append(completedLogHashes, c.Hash.String())
@@ -50,9 +58,7 @@ If you use '-d' to filter the printStatus logs, you can input a date or a date r
 		})
 		cobra.CheckErr(err)
 		// 获取commit log
-		var gitLogOpts = git.LogOptions{
-			All: true,
-		}
+
 		if logOpts.number == 0 {
 			logOpts.number = 10
 		}
@@ -92,6 +98,12 @@ If you use '-d' to filter the printStatus logs, you can input a date or a date r
 				//nt := time.Now()
 				gitLogOpts.Since = &startDate
 				//gitLogOpts.Until = &nt
+			}
+		}
+
+		if logOpts.file != "" {
+			gitLogOpts.PathFilter = func(path string) bool {
+				return path == logOpts.file
 			}
 		}
 
@@ -145,7 +157,7 @@ If you use '-d' to filter the printStatus logs, you can input a date or a date r
 
 		for {
 			pp := &survey.Input{
-				Message: "Input a printStatus hash to show the file which is changed in this printStatus:",
+				Message: "Input a commit hash to show the file which is changed in this commit:",
 				Suggest: func(toComplete string) []string {
 					var suggestions []string
 					for _, s := range commitLogs {
@@ -161,16 +173,42 @@ If you use '-d' to filter the printStatus logs, you can input a date or a date r
 			err = survey.AskOne(pp, &ch)
 			cobra.CheckErr(err)
 
-			if ch == "" || ch == "q" {
+			if ch == "q" {
 				break
 			}
 
+			if _, ok := logHashes[ch]; !ok {
+				tm.Println(tm.Color("Invalid input", tm.RED))
+				tm.Flush()
+				continue
+			}
+
+			if len(logOpts.file) > 0 {
+				// 获取Commit的父节点
+				var ph string
+				for k, h := range completedLogHashes {
+					if h == logHashes[ch] {
+						if k == len(completedLogHashes)-1 {
+							ph = ""
+						} else {
+							ph = completedLogHashes[k+1]
+						}
+						break
+					}
+				}
+
+				// 使用git log -p命令获取commit的详细信息
+				err = common.ShowLog(ch, ph, logOpts.file)
+				// 检查err是否为broken pipe，如果是则不报错
+				if err != nil && !strings.Contains(err.Error(), "broken pipe") {
+					cobra.CheckErr(err)
+				}
+				continue
+			}
 			// 查询ch的文件更改
 			fileChanges, err := common.GetFileChangeByCommit(workRepo, logHashes[ch])
 			cobra.CheckErr(err)
-
 			fileChanges = append(fileChanges, "quit")
-
 			for {
 				// 选择文件
 				p := &survey.Select{
@@ -202,7 +240,9 @@ If you use '-d' to filter the printStatus logs, you can input a date or a date r
 
 				// 使用git log -p命令获取commit的详细信息
 				err = common.ShowLog(ch, ph, fc)
-				cobra.CheckErr(err)
+				if err != nil && !strings.Contains(err.Error(), "broken pipe") {
+					cobra.CheckErr(err)
+				}
 			}
 		}
 	},
@@ -214,10 +254,11 @@ var (
 )
 
 func init() {
-	logCmd.Flags().IntVarP(&logOpts.number, "number", "n", 0, "show the last <number> printStatus logs")
-	logCmd.Flags().StringVarP(&logOpts.author, "author", "a", "", "filter the printStatus logs by author")
-	logCmd.Flags().StringVarP(&logOpts.date, "date", "d", "", "filter the printStatus logs by date")
-	logCmd.Flags().StringVarP(&logOpts.email, "email", "e", "", "filter the printStatus logs by email")
+	logCmd.Flags().IntVarP(&logOpts.number, "number", "n", 0, "show the last <number> commit logs")
+	logCmd.Flags().StringVarP(&logOpts.author, "author", "a", "", "filter the commit logs by author")
+	logCmd.Flags().StringVarP(&logOpts.date, "date", "d", "", "filter the commit logs by date")
+	logCmd.Flags().StringVarP(&logOpts.email, "email", "e", "", "filter the commit logs by email")
+	logCmd.Flags().StringVarP(&logOpts.file, "file", "f", "", "filter the commit logs by file")
 }
 
 const DateFormat = "2006-01-02 15:04:05"

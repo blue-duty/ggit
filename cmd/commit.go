@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"got/common"
 	"strconv"
 	"strings"
@@ -40,24 +41,34 @@ func (fs fileStatus) Print(i int) {
 	switch fs.status {
 	case git.Untracked:
 		// print serial number and file name and format alignment
-		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.WHITE))
-		cobra.CheckErr(err)
+		serial := fmt.Sprintf("%d. %s", i, fs.file)
+		tm.Printf("%s", tm.Color(serial, tm.WHITE))
+		tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.WHITE))
+		tm.Printf("%s\n", tm.Color("Untracked", tm.WHITE))
 		tm.Flush()
 	case git.Added:
-		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.GREEN))
-		cobra.CheckErr(err)
+		serial := fmt.Sprintf("%d. %s", i, fs.file)
+		tm.Printf("%s", tm.Color(serial, tm.GREEN))
+		tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.GREEN))
+		tm.Printf("%s\n", tm.Color("Added", tm.GREEN))
 		tm.Flush()
 	case git.Modified:
-		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.YELLOW))
-		cobra.CheckErr(err)
+		serial := fmt.Sprintf("%d. %s", i, fs.file)
+		tm.Printf("%s", tm.Color(serial, tm.YELLOW))
+		tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.YELLOW))
+		tm.Printf("%s\n", tm.Color("Modified", tm.YELLOW))
 		tm.Flush()
 	case git.Deleted:
-		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.RED))
-		cobra.CheckErr(err)
+		serial := fmt.Sprintf("%d. %s", i, fs.file)
+		tm.Printf("%s", tm.Color(serial, tm.RED))
+		tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.RED))
+		tm.Printf("%s\n", tm.Color("Deleted", tm.RED))
 		tm.Flush()
 	default:
-		_, err := tm.Printf("%d. %s\n", i, tm.Color(fs.file, tm.BLACK))
-		cobra.CheckErr(err)
+		serial := fmt.Sprintf("%d. %s", i, fs.file)
+		tm.Printf("%s", tm.Color(serial, tm.WHITE))
+		tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.WHITE))
+		tm.Printf("%s\n", tm.Color("Untracked", tm.WHITE))
 		tm.Flush()
 	}
 }
@@ -229,6 +240,9 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			tm.Flush()
 			return
 		}
+		if fileIndex == "q" || fileIndex == "Q" {
+			return
+		}
 		if strings.Contains(fileIndex, ";") {
 			var fsl = fileStatusList
 			for _, index := range strings.Split(fileIndex, ";") {
@@ -261,13 +275,10 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 				}
 				i, err := strconv.Atoi(strings.TrimSpace(index))
 				cobra.CheckErr(err)
-				_, err = tm.Println(fileStatusList[i-1].file)
-				cobra.CheckErr(err)
-				tm.Flush()
-
 				// add file to staging area
 				_, err = workTree.Add(fileStatusList[i-1].file)
 				cobra.CheckErr(err)
+				fmt.Printf("Add %s to staging area successfully.\n", fileStatusList[i-1].file)
 			}
 		}
 

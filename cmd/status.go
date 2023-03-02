@@ -3,6 +3,7 @@ package cmd
 import (
 	"got/common"
 	"strconv"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	tm "github.com/buger/goterm"
@@ -76,8 +77,8 @@ This command shows the working tree status.`,
 					continue
 				}
 				err := common.ShowDiff(files[statusOpts.selectedFile].file, parentCommit)
-				if err != nil {
-					return
+				if err != nil && !strings.Contains(err.Error(), "broken pipe") {
+					cobra.CheckErr(err)
 				}
 			} else {
 				_, err := tm.Println(tm.Color("You must input the serial number of the file to show the diff, or input 'q' to quit.", tm.RED))
