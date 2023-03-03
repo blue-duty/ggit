@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"got/common"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -14,10 +15,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type fileStatus struct {
-	file   string
-	status git.StatusCode
-}
+// type fileStatus struct {
+// 	file   string
+// 	status git.StatusCode
+// }
 
 type commitOptions struct {
 	except  string
@@ -36,6 +37,7 @@ func init() {
 	commitCmd.Flags().BoolVarP(&commitOpts.push, "push", "p", false, "push to remote repository")
 }
 
+/*
 // Print fileStatus print
 func (fs fileStatus) Print(i int) {
 	switch fs.status {
@@ -88,11 +90,70 @@ func (fs fileStatus) String() string {
 	}
 }
 
+
 func printStatus(fileStatusList []fileStatus) {
 	for i, fs := range fileStatusList {
 		fs.Print(i + 1)
 	}
 	tm.Flush()
+}
+*/
+
+func initFiles(fs git.Status) {
+	if len(fs) == 0 {
+		_, err := tm.Println(tm.Color("There is no file to printStatus.", tm.RED))
+		cobra.CheckErr(err)
+		tm.Flush()
+		os.Exit(1)
+	}
+	var i = 1
+	for file, s := range fs {
+		if s.Staging == git.Deleted || s.Worktree == git.Deleted {
+			files[strconv.Itoa(i)] = newGotFileStatus(file, s)
+			i++
+		} else if s.Staging == git.Added || s.Worktree == git.Added {
+			files[strconv.Itoa(i)] = newGotFileStatus(file, s)
+			i++
+		} else if s.Staging == git.Modified || s.Worktree == git.Modified {
+			files[strconv.Itoa(i)] = newGotFileStatus(file, s)
+			i++
+		} else {
+			files[strconv.Itoa(i)] = newGotFileStatus(file, s)
+			i++
+		}
+	}
+}
+
+func printStatus() {
+	for i := 1; i <= len(files); i++ {
+		if file, ok := files[strconv.Itoa(i)]; ok {
+			if file.staging == git.Deleted || file.worktree == git.Deleted {
+				serial := fmt.Sprintf("%d. %s", i, file.file)
+				tm.Printf("%s", tm.Color(serial, tm.RED))
+				tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.RED))
+				tm.Printf("%s\n", tm.Color("Deleted", tm.RED))
+				tm.Flush()
+			} else if file.staging == git.Added || file.worktree == git.Added {
+				serial := fmt.Sprintf("%d. %s", i, file.file)
+				tm.Printf("%s", tm.Color(serial, tm.GREEN))
+				tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.GREEN))
+				tm.Printf("%s\n", tm.Color("Added", tm.GREEN))
+				tm.Flush()
+			} else if file.staging == git.Modified || file.worktree == git.Modified {
+				serial := fmt.Sprintf("%d. %s", i, file.file)
+				tm.Printf("%s", tm.Color(serial, tm.YELLOW))
+				tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.YELLOW))
+				tm.Printf("%s\n", tm.Color("Modified", tm.YELLOW))
+				tm.Flush()
+			} else if file.staging == git.Untracked || file.worktree == git.Untracked {
+				serial := fmt.Sprintf("%d. %s", i, file.file)
+				tm.Printf("%s", tm.Color(serial, tm.WHITE))
+				tm.Printf("%s", tm.Color(strings.Repeat("-", 50-len(serial)), tm.WHITE))
+				tm.Printf("%s\n", tm.Color("Untracked", tm.WHITE))
+				tm.Flush()
+			}
+		}
+	}
 }
 
 var commitCmd = &cobra.Command{
@@ -165,21 +226,24 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			return
 		}
 
-		gitStatus()
+		fileStatus, err := workTree.Status()
+		cobra.CheckErr(err)
+		initFiles(fileStatus)
+
 		if commitOpts.except != "" {
-			eMap := make(map[string]bool)
+			iMap := files
 			exceptFiles := strings.Split(commitOpts.except, ",")
-			for _, e := range exceptFiles {
-				eMap[e] = true
+			for _, ef := range exceptFiles {
+				delete(iMap, ef)
 			}
-			for _, fs := range fileStatusList {
+
+			for _, fs := range iMap {
 				// get the file name
 				fn := fs.file
-				if _, ok := eMap[fn]; !ok {
-					_, err := workTree.Add(fs.file)
-					cobra.CheckErr(err)
-				}
+				_, err := workTree.Add(fn)
+				cobra.CheckErr(err)
 			}
+
 			if commitOpts.message == "" {
 				var message string
 				prompt := &survey.Input{
@@ -223,10 +287,10 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			return
 		}
 
-		_, err := tm.Println(`The following is the file which can be committed: `)
+		tm.Println(`The following is the file which can be committed: `)
 		cobra.CheckErr(err)
 		tm.Flush()
-		printStatus(fileStatusList)
+		printStatus()
 		var fileIndex string
 		prompt := &survey.Input{
 			Message: "Please input the serial number of the file (You can use ',' to separate you want to commit or use ';' to separate you don't want to commit):",
@@ -244,7 +308,7 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 			return
 		}
 		if strings.Contains(fileIndex, ";") {
-			var fsl = fileStatusList
+			var fsl = files
 			for _, index := range strings.Split(fileIndex, ";") {
 				if len(strings.TrimSpace(index)) == 0 {
 					_, err := tm.Println(tm.Color("You don't input the serial number of the file you want to commit.", tm.RED))
@@ -252,10 +316,8 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 					tm.Flush()
 					return
 				}
-				i, err := strconv.Atoi(strings.TrimSpace(index))
-				cobra.CheckErr(err)
 				// remove
-				fsl = append(fsl[:i-1], fsl[i:]...)
+				delete(fsl, index)
 			}
 			for _, fs := range fsl {
 				_, err := workTree.Add(fs.file)
@@ -270,12 +332,11 @@ If you use the -a flag and -e flag at the same time, it will be invalid.`,
 					tm.Flush()
 					return
 				}
-				i, err := strconv.Atoi(strings.TrimSpace(index))
-				cobra.CheckErr(err)
+
 				// add file to staging area
-				_, err = workTree.Add(fileStatusList[i-1].file)
+				_, err = workTree.Add(files[index].file)
 				cobra.CheckErr(err)
-				fmt.Printf("Add %s to staging area successfully.\n", fileStatusList[i-1].file)
+				fmt.Printf("Add %s to staging area successfully.\n", files[index].file)
 			}
 		}
 

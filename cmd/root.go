@@ -32,14 +32,29 @@ func Execute() {
 	}
 }
 
+type gotFileStatus struct {
+	file    string
+	staging git.StatusCode
+	// worktree is the status of a file in the worktree
+	worktree git.StatusCode
+}
+
+func newGotFileStatus(file string, status *git.FileStatus) *gotFileStatus {
+	return &gotFileStatus{
+		file:     file,
+		staging:  status.Staging,
+		worktree: status.Worktree,
+	}
+}
+
 var (
-	fileStatusList []fileStatus
-	workTree       *git.Worktree
-	workRepo       *git.Repository
-	globalMail     string
-	globalName     string
-	parentCommit   string
-	files          = make(map[string]fileStatus)
+	// fileStatusList []fileStatus
+	workTree     *git.Worktree
+	workRepo     *git.Repository
+	globalMail   string
+	globalName   string
+	parentCommit string
+	files        = make(map[string]*gotFileStatus)
 )
 
 func init() {
@@ -69,6 +84,7 @@ func newWorkTree() {
 	cobra.CheckErr(err)
 }
 
+/*
 // git the status of the current repository
 func gitStatus() {
 	var err error
@@ -97,6 +113,7 @@ func gitStatus() {
 		fileStatusList = append(fileStatusList, fs)
 	}
 }
+*/
 
 // 获取git的用户名和邮箱
 func getGitConfig() (string, string) {

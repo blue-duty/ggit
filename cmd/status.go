@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"got/common"
-	"strconv"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -24,25 +23,18 @@ var statusCmd = &cobra.Command{
 This command shows the working tree status.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newWorkTree()
-		gitStatus()
-		for k, f := range fileStatusList {
-			files[strconv.Itoa(k+1)] = f
-		}
+		fileStatus, err := workTree.Status()
+		cobra.CheckErr(err)
+		initFiles(fileStatus)
 
 		head, err := workRepo.Head()
 		cobra.CheckErr(err)
-
 		parentCommit = head.Hash().String()
-		if len(fileStatusList) == 0 {
-			_, err := tm.Println(tm.Color("There is no file to show status.", tm.RED))
-			cobra.CheckErr(err)
-			tm.Flush()
-			return
-		}
+
 		_, err = tm.Println(`The following is the all status of the files which are not Unmodified.`)
 		cobra.CheckErr(err)
 		tm.Flush()
-		printStatus(fileStatusList)
+		printStatus()
 		for {
 			prompt := &survey.Input{
 				Message: "You can input the serial number of the file to show the diff, or input 'q' to quit:",
@@ -58,19 +50,19 @@ This command shows the working tree status.`,
 			}
 
 			if _, ok := files[statusOpts.selectedFile]; ok {
-				if files[statusOpts.selectedFile].status == git.Added {
+				if files[statusOpts.selectedFile].staging == git.Added || files[statusOpts.selectedFile].worktree == git.Added {
 					_, err := tm.Println(tm.Color("The file has been added, so there is no diff.", tm.RED))
 					cobra.CheckErr(err)
 					tm.Flush()
 					continue
 				}
-				if files[statusOpts.selectedFile].status == git.Untracked {
+				if files[statusOpts.selectedFile].staging == git.Untracked || files[statusOpts.selectedFile].worktree == git.Untracked {
 					_, err := tm.Println(tm.Color("The file is untracked, so there is no diff.", tm.RED))
 					cobra.CheckErr(err)
 					tm.Flush()
 					continue
 				}
-				if files[statusOpts.selectedFile].status == git.Deleted {
+				if files[statusOpts.selectedFile].staging == git.Deleted || files[statusOpts.selectedFile].worktree == git.Deleted {
 					_, err := tm.Println(tm.Color("The file has been deleted, so there is no diff.", tm.RED))
 					cobra.CheckErr(err)
 					tm.Flush()
