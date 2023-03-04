@@ -63,6 +63,8 @@ func init() {
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(logCmd)
+	rootCmd.AddCommand(cloneCmd)
+	rootCmd.AddCommand(pullCmd)
 }
 
 func newWorkTree() {
